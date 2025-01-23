@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultrap.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout/layout}">
+
+<head>
+    <link rel="stylesheet" th:href="@{/css/price.css}">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script> <!-- Chart.js 라이브러리 추가 -->
+</head>
+
+
+<div layout:fragment="content">
+    <div class="container-md">
+        <!-- 상품명 검색 부분 -->
+        <div class="price-container">
+            <div class="price-title">시세 조회</div>
+            <div class="price-subTitle">원하시는 상품이 얼마에 거래되고 있는지 알아보세요</div>
+            <!--class="d-flex"-->
+            <form action="/board/price" role="search" id="priceSearchForm">
+                <div class="price-searchBar">
+                    <!--class="form-control me-2"-->
+                    <!--<img src="/img/search.svg" alt="Search Icon" class="price-searchIcon">-->
+                    <!--aria-label="Search"-->
+                    <input name="keyword" type="search" placeholder="어떤 시세 정보가 궁금하세요?" class="price-searchBox" th:value="${keyword != null ? keyword : ''}">
+                </div>
+            </form>
+        </div>
+
+        <!-- 평균 가격 그래프 -->
+        <div class="price-graph-container" style="width:800px; height:400px; margin-left:238px;">
+            <canvas id="priceChart"></canvas>
+        </div>
+
+        <div id="price-hiddenBox">
+            <div class="product-title">최근 등록된 상품</div>
+            <hr>
+            <div class="product-subTitle">최근 등록된 상품의 가격을 비교해봤어요</div>
+        </div>
+
+
+            <!-- 시세 정보 표시 부분 -->
+            <div class="product-priceContainer">
+                <div class="product-priceBox"><span class="product-priceName">평균 가격</span><span th:text="${averagePrice} + '원'" class="product-price"></span></div>
+                <div class="product-divider"></div>
+                <div class="product-priceBox"><span class="product-priceName">최대 가격</span><span th:text="${maxPrice} + '원'" class="product-price"></span></div>
+                <div class="product-divider"></div>
+                <div class="product-priceBox"><span class="product-priceName">최소 가격</span><span th:text="${minPrice} + '원'" class="product-price"></span></div>
+            </div>
+
+            <!-- 검색된 상품 리스트 부분 -->
+            <div class="product-list">
+                <!-- 최근 등록된 상품 20개 순회 -->
+                <div th:each="product : ${recentProducts}" class="product-item">
+                    <a th:href="@{/board/detail(boardId=${product.boardVO.boardId})}">
+                    <!-- 상품 이미지 -->
+                    <div class="product-image">
+                        <img th:if="${product.fileVOList != null and !product.fileVOList.isEmpty()}"
+                             th:src="@{${product.fileVOList[0].fileUrl}}" alt="상품 이미지" />
+                    </div>
+
+                    <!-- 상품 제목 -->
+                    <div th:text="${product.boardVO.boardName}" class="item-title"></div>
+
+                    <!-- 상품 가격 -->
+                    <div th:text="${product.boardVO.formattedPrice} + '원'" class="item-price"></div>
+
+                    <!-- 상품 등록일 -->
+                    <div style="font-size:12px; color:#A9A9A9;" th:text="${productTimes[product.boardVO.boardId]} + ' | ' + ${sellerAddresses[product.boardVO.sellerId]}"></div>
+                    </a>
+                </div>
+            </div>
+        </div>
+
+    <hr style="visibility: hidden; margin-bottom: 120px;">
+
+
+    <script th:inline="javascript">
+        var averagePriceData = /*[[${avgPriceDataJson}]]*/;
+        console.log(averagePriceData);  // 데이터 확인
+    </script>
+
+    <script th:src="@{/js/priceChart.js}"></script>
+</div>

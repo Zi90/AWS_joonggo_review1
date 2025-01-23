@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="en"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultrap.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout/layout}">
+
+<body>
+
+<div layout:fragment="content">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/Swiper/4.5.1/css/swiper.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Swiper/4.5.1/js/swiper.min.js"></script>
+
+  <link rel="stylesheet" th:href="@{/css/detail.css}">
+  <link rel="stylesheet" th:href="@{/css/detail-swiper.css}">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script> <!-- Chart.js 라이브러리 추가 -->
+  <link rel="stylesheet" th:href="@{/css/modal.css}">
+
+  <th:block th:with="boardVO=${boardFileDTO.boardVO}">
+
+    <!--중고나라 상품 디테일 기준-->
+    <div class="detail-firstContainer">
+      <!--왼쪽의 상품 이미지(swiper)-->
+      <div class="detail-left">
+        <div id="slide1" class="swiper-container">
+          <div class="swiper-wrapper">
+            <th:block th:each="file : ${boardFileDTO.fileVOList}">
+              <div class="swiper-slide">
+                  <!-- 동적으로 이미지 출력 -->
+                  <img th:src="@{${file.fileUrl}}" alt="상품 이미지">
+              </div>
+            </th:block>
+          </div>
+
+          <!-- 네비게이션 -->
+          <div class="swiper-button-next"><img src="/img/next.svg" class="slide-button"></div><!-- 다음 버튼 (오른쪽에 있는 버튼) -->
+          <div class="swiper-button-prev"><img src="/img/prev.svg" class="slide-button"></div><!-- 이전 버튼 -->
+
+          <!-- 페이징 -->
+          <div class="swiper-pagination"></div>
+        </div>
+      </div>
+
+      <!--오른쪽의 상품 정보-->
+      <div class="detail-right">
+        <!--카테고리-->
+        <div class="detail-category">[[${boardVO.category}]]</div>
+
+        <div class="detail-titleBox">
+          <!--판매글 제목-->
+          <span class="detail-title">[[${boardVO.boardName}]]</span>
+
+          <!--url 복사 아이콘-->
+          <span class="detail-url"><img src="/img/banner-url.svg" onclick="clip()"></span>
+        </div>
+
+        <!--상품 가격-->
+        <div class="detail-price">[[${boardVO.formattedPrice}]]원</div>
+
+        <div class="detail-atcBox">
+          <div class="detail-atc">
+            <!--등록 시간-->
+            <span>[[${timeAgo}]]</span>
+
+            <!--구분점-->
+            <span class="detail-divider">·</span>
+
+            <!--조회수-->
+            <span>조회 <span th:text="${boardVO.readCount}">0</span></span>
+
+            <!--구분점-->
+            <span class="detail-divider">·</span>
+
+            <!--찜 수-->
+            <span>찜 <span id="likeCount">[[${boardVO.likeCount}]]</span></span>
+          </div>
+
+          <!--시세 조회 href-->
+          <a href="/board/price"><span class="detail-boardPrice">시세조회</span></a>
+        </div>
+
+        <div class="detail-addressBox">
+          <span class="detail-divider">·</span>
+
+          <span>거래희망지역</span>
+
+          <!--지역 동 출력-->
+          <span class="detail-addressName">[[${sellerAddress}]]</span>
+        </div>
+
+        <!--찜하기, 채팅하기, 구매하기-->
+        <div class="detail-buttons">
+          <button type="button" id="wishBtn" class="detail-likeCountButton" th:data-board-id="${boardVO.boardId}">
+            <span id="wishIcon">
+                <!-- 조건에 맞는 아이콘 표시 -->
+                <svg xmlns="http://www.w3.org/2000/svg" width="30" height="30" fill="red" class="bi"
+                     th:classappend="${isAlreadyWished != null && isAlreadyWished ? 'bi-heart-fill' : 'bi-heart'}" viewBox="0 0 16 16">
+                    <path th:if="${isAlreadyWished != null && isAlreadyWished}" fill-rule="evenodd" d="M8 1.314C12.438-3.248 23.534 4.735 8 15-7.534 4.736 3.562-3.248 8 1.314"/>
+                    <path th:if="${isAlreadyWished != null && !isAlreadyWished}" d="m8 2.748-.717-.737C5.6.281 2.514.878 1.4 3.053c-.523 1.023-.641 2.5.314 4.385.92 1.815 2.834 3.989 6.286 6.357 3.452-2.368 5.365-4.542 6.286-6.357.955-1.886.838-3.362.314-4.385C13.486.878 10.4.28 8.717 2.01zM8 15C-7.333 4.868 3.279-3.04 7.824 1.143q.09.083.176.171a3 3 0 0 1 .176-.17C12.72-3.042 23.333 4.867 8 15"/>
+                </svg>
+            </span>
+          </button>
+
+<!--          <button class="detail-chattingButton">채팅하기</button>-->
+          <!--          <button class="detail-buyingButton btn-custom" id="paymentBtn">구매하기</button>-->
+
+          <button type="button"
+                  id="chatBtn"
+                  class="chat-btn detail-chattingButton"
+                  th:data-seller-id="${boardFileDTO.boardVO.sellerId}"
+                  th:data-board-name="${boardFileDTO.boardVO.boardName}"
+                  th:data-user-num="${#authentication.principal != 'anonymousUser' ? #authentication.principal.userVO.userNum : _}">채팅하기</button>
+
+
+          <button type="button" id="buyBtn" th:data-board-id="${boardFileDTO.boardVO.boardId}"
+                  class="pay-btn detail-buyingButton btn-custom">구매하기</button>
+
+          <div th:id="'paymentModal_' + ${boardFileDTO.boardVO.boardId}" class="buyModal">
+            <div class="buyModal-content">
+              <!-- 닫기 버튼 -->
+              <button class="close btn-custom" id="close" th:data-board-id="${boardFileDTO.boardVO.boardId}">
+                <img src="/img/x.png">
+              </button>
+              <h2 class="pay-wait-head">잠시만요! 판매자와 대화를 하셨나요?</h2>
+              <br>
+              <p class="pay-wait-body">채팅을 하지 않고 결제하면 거래가 취소될 수 있어요.</p>
+              <p class="pay-wait-body">판매자와의 채팅을 권장드립니다.</p>
+              <!--          <button id="tradeBtn">직거래</button>-->
+              <button type="button"
+                      class="chat-btn btn-custom"
+                      th:data-seller-id="${boardFileDTO.boardVO.sellerId}"
+                      th:data-board-name="${boardFileDTO.boardVO.boardName}"
+                      th:data-user-num="${#authentication.principal != 'anonymousUser' ? #authentication.principal.userVO.userNum : _}">알겠습니다. 채팅을 진행할게요.</button>
+
+              <!-- 결제 버튼: data-board-id로 boardId를 전달 -->
+              <button type="button" class="paymentBtn" id="paymentBtn"
+                      th:data-board-id="${boardFileDTO.boardVO.boardId}">
+                괜찮습니다. 바로 결제할게요.
+              </button>
+<!--          <button class="detail-buyingButton btn-custom" id="paymentBtn">구매하기</button>-->
+            </div>
+          </div>
+
+          <button id="reportBtn" href="#" data-bs-toggle="modal" data-bs-target="#reportModal" class="detail-atcButton-1">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" class="bi bi-shield-exclamation" viewBox="0 0 20 20">
+              <path d="M5.338 1.59a61 61 0 0 0-2.837.856.48.48 0 0 0-.328.39c-.554 4.157.726 7.19 2.253 9.188a10.7 10.7 0 0 0 2.287 2.233c.346.244.652.42.893.533q.18.085.293.118a1 1 0 0 0 .101.025 1 1 0 0 0 .1-.025q.114-.034.294-.118c.24-.113.547-.29.893-.533a10.7 10.7 0 0 0 2.287-2.233c1.527-1.997 2.807-5.031 2.253-9.188a.48.48 0 0 0-.328-.39c-.651-.213-1.75-.56-2.837-.855C9.552 1.29 8.531 1.067 8 1.067c-.53 0-1.552.223-2.662.524zM5.072.56C6.157.265 7.31 0 8 0s1.843.265 2.928.56c1.11.3 2.229.655 2.887.87a1.54 1.54 0 0 1 1.044 1.262c.596 4.477-.787 7.795-2.465 9.99a11.8 11.8 0 0 1-2.517 2.453 7 7 0 0 1-1.048.625c-.28.132-.581.24-.829.24s-.548-.108-.829-.24a7 7 0 0 1-1.048-.625 11.8 11.8 0 0 1-2.517-2.453C1.928 10.487.545 7.169 1.141 2.692A1.54 1.54 0 0 1 2.185 1.43 63 63 0 0 1 5.072.56"/>
+              <path d="M7.001 11a1 1 0 1 1 2 0 1 1 0 0 1-2 0M7.1 4.995a.905.905 0 1 1 1.8 0l-.35 3.507a.553.553 0 0 1-1.1 0z"/>
+            </svg>
+            신고
+          </button>
+        </div>
+
+
+          <button id="toggleGraphButton">
+            <svg id="toggleIcon" xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" class="bi bi-chevron-down" viewBox="0 0 18 18">
+              <path fill-rule="evenodd" d="M1.646 4.646a.5.5 0 0 1 .708 0L8 10.293l5.646-5.647a.5.5 0 0 1 .708.708l-6 6a.5.5 0 0 1-.708 0l-6-6a.5.5 0 0 1 0-.708"/>
+            </svg>
+            지금 이 상품 시세 확인하기
+          </button>
+          <!-- 평균 가격 그래프 -->
+          <div class="price-graph-container"  id="priceGraph" style="width:500px; height:300px; display: none; margin-top: 10px;">
+            <canvas id="priceChart"></canvas>
+          </div>
+
+      </div>
+
+    </div>
+
+    <!--왼쪽 상품 정보, 오른쪽 가게 정보-->
+    <div class="detail-secondContainer">
+      <!--판매글 content 가져와서 출력-->
+      <div class="detail-left">
+        <div class="detail-title">상품 정보</div>
+
+        <!--판매글 content-->
+        <div  id="boardContent" th:utext="${boardVO.boardContent}"></div>
+      </div>
+
+      <!--myInfo 가져와서 출력-->
+      <div class="detail-right">
+        <div class="detail-title">가게 정보</div>
+
+        <div class="detail-user">
+          <!--판매자 유저 이름-->
+          <div class="detail-name">판매자 <strong class="font-weight-bold">[[${sellerUserVO.userName}]]</strong></div>
+          <div class="detail-profile"><img src="/img/profile.png"></div>
+        </div>
+
+        <!--매너 지수-->
+        <div class="scoreArea">
+          <div class="d-flex justify-content-between align-items-center">
+            <span>
+              <span class="mannerSpan">매너지수</span>
+              <span id="score-value">[[${sellerUserVO.score}]]</span>
+            </span>
+            <span class="maxScore">
+              100
+            </span>
+          </div>
+          <div class="score-bar-container">
+            <div id="score-bar" class="score-bar"></div>
+          </div>
+        </div>
+
+
+        <div class="margin-top-50 " th:if="${#authentication.principal != 'anonymousUser' && #authentication.principal.userVO.userNum == boardVO.sellerId}">
+          <div class="d-flex justify-content-end gap-1">
+            <button type="button" class="btn btn-custom" id="modBtn">수정</button>
+            <a th:href="@{/board/delete(boardId=${boardVO.boardId})}">
+              <button class="btn btn-custom" type="button" id="delBtn" onclick="return confirm('정말 삭제하시겠습니까?')">글삭제</button>
+            </a>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!--같은 카테고리인 상품들을 출력-->
+    <div class="detail-thirdContainer">
+      <div class="detail-title">이런 상품은 어때요?</div>
+
+      <!--swiper-->
+      <div>
+        <div id="slide6" class="swiper-container">
+          <div class="swiper-wrapper">
+            <!-- ${sameCategoryProducts} 리스트를 반복 -->
+            <div class="swiper-slide" th:each="product : ${sameCategoryProducts}">
+              <a th:href="@{/board/detail(boardId=${product.boardVO.boardId})}">
+                <!-- 이미지가 있는 경우에만 출력 -->
+                <img th:if="${not #lists.isEmpty(product.fileVOList)}" th:src="${product.fileVOList[0].fileUrl}" alt="상품 이미지">
+                <div class="item-title" th:text="${product.boardVO.boardName}"></div>
+                <div class="item-price" th:text="${product.boardVO.formattedPrice} + '원'"></div>
+                <div class="item-atc" th:text="${SameCategoryProductTime[product.boardVO.boardId]} + ' | ' + ${getSellerAddr[product.boardVO.sellerId]}"></div>
+              </a>
+            </div>
+          </div>
+
+          <div class="swiper-button-next"><img src="/img/next.svg" class="slide-button"></div>
+          <div class="swiper-button-prev"><img src="/img/prev.svg" class="slide-button"></div>
+
+<!--          <div class="swiper-pagination"></div>-->
+        </div>
+      </div>
+    </div>
+
+
+
+    <form id="reportForm" action="/board/report" method="post">
+    <div class="modal fade" id="reportModal" tabindex="-1" aria-labelledby="reportModalLabel" aria-hidden="true">
+      <div class="modal-dialog">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" id="reportModalLabel">신고 사유 선택</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+             <div class="modal-body">
+              <div class="mb-3">
+                <label for="reasonSelect" class="form-label">신고 사유</label>
+                <select id="reasonSelect" class="form-select" name="reasonId" required>
+                  <option value="">신고 사유를 선택하세요</option>
+                  <option th:each="reason : ${reasonList}"
+                          th:value="${reason.compId}"
+                          th:text="${reason.compContent}">
+                  </option>
+                </select>
+                <span>⚠️ 허위 신고는 서비스 이용에 제한을 받을 수 있습니다.</span>
+              </div>
+              <!-- sellerId (신고 당할 사람), 게시글 번호(리다이렉트용) -->
+              <input type="hidden" name="sellerId" th:value="${boardVO.sellerId}">
+              <input type="hidden" name="boardId" th:value="${boardVO.boardId}">
+               <input type="hidden" name="reporterId"
+                      th:value="${#authentication.principal != 'anonymousUser' ? #authentication.getPrincipal().userVO.userNum : ''}">
+             </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">취소</button>
+            <button type="submit" class="btn btn-danger" id="submitReport">신고하기</button>
+            <th:block th:if="${alertMessage}">
+              <script type="text/javascript">
+                window.onload = function() {
+                  alert('[[${alertMessage}]]');
+                }
+              </script>
+            </th:block>
+          </div>
+        </div>
+      </div>
+    </div>
+    </form>
+
+    <div id="custom-alert" class="event-modal">
+      <div class="event-modalContent">
+        <p id="alert-message"></p>
+        <hr class="event-divider">
+        <button id="alert-ok-button">확인</button>
+      </div>
+    </div>
+
+    <script th:inline="javascript">
+      /*<![CDATA[*/
+      var boardFileDTO = [[${boardFileDTO}]];
+      /*]]>*/
+    </script>
+
+    <script th:inline="javascript">
+      /*<![CDATA[*/
+      var boardId = [[${boardVO.boardId}]];
+      /*]]>*/
+          /*<![CDATA[*/
+      var tradeFlag = [[${boardVO.tradeFlag}]];
+      /*]]>*/
+    </script>
+
+    <script th:inline="javascript">
+      /*<![CDATA[*/
+
+       var principal = [[${#authentication.principal}]];
+
+       document.getElementById('buyBtn').addEventListener('click', function() {
+         var principal = [[${#authentication.principal}]];
+         if (principal === 'anonymousUser') {
+           window.location.href = '/user/login';
+         }
+       });
+
+       document.getElementById('chatBtn').addEventListener('click', function() {
+         var principal = [[${#authentication.principal}]];
+         if (principal === 'anonymousUser') {
+           window.location.href = '/user/login';
+         }
+       });
+
+       document.getElementById('reportBtn').addEventListener('click', function() {
+         var principal = [[${#authentication.principal}]];
+         if (principal === 'anonymousUser') {
+           window.location.href = '/user/login';
+         }
+       });
+       /*]]>*/
+
+    </script>
+
+    <script th:inline="javascript">
+      var averagePriceData = /*[[${avgPriceDataJson}]]*/;
+      console.log(averagePriceData);  // 데이터 확인
+    </script>
+
+    <script src="https://cdn.iamport.kr/v1/iamport.js"></script>
+    <script th:src="@{/js/buy.js}"></script>
+    <script th:src="@{/js/productBoardDetail.js}"></script>
+    <script th:src="@{/js/event-modal.js}"></script>
+    <script th:src="@{/js/url.js}"></script>
+    <script th:src="@{/js/detail-swiper.js}"></script>
+    <script th:src="@{/js/priceChart.js}"></script>
+
+    <script th:src="@{/js/wishBuy.js}"></script>
+    <script th:src="@{/js/chatCreate.js}"></script>
+  </th:block>
+
+
+
+</div>
+
+
+</body>
